@@ -1,0 +1,6 @@
+*venv*
+data/*
+*xlsx
+test*
+.venv
+venv
