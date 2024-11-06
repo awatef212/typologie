@@ -22,6 +22,11 @@ def charger_fichier():
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
 
+# Fonction pour activer ou désactiver toutes les cases à cocher
+def toggle_select_all(select_all_var):
+    for _, var in colonnes_coches:
+        var.set(select_all_var.get())
+
 # Fonction pour ouvrir la fenêtre de sélection des colonnes
 def ouvrir_fenetre_colonnes():
     bouton_suivant.config(state=tk.NORMAL)
@@ -55,14 +60,19 @@ def ouvrir_fenetre_colonnes():
     global colonnes_coches
     colonnes_coches = []
     
+    # Ajout de la case à cocher "Select All"
+    select_all_var = tk.BooleanVar()
+    select_all_check = tk.Checkbutton(frame_content, text="Select All", variable=select_all_var, command=lambda: toggle_select_all(select_all_var))
+    select_all_check.pack(anchor='w')
+
     for colonne in df.columns:
         var = tk.BooleanVar()
-        tk.Checkbutton(frame_content, text=colonne, variable=var).pack(anchor='w')
+        check = tk.Checkbutton(frame_content, text=colonne, variable=var)
+        check.pack(anchor='w')
         colonnes_coches.append((colonne, var))
 
     bouton_valider_colonnes = tk.Button(frame_content, text="Valider", command=valider_selection)
     bouton_valider_colonnes.pack(side=tk.LEFT, padx=10, pady=10)
-
 
 # Fonction pour valider la sélection des colonnes
 def valider_selection():
@@ -71,9 +81,14 @@ def valider_selection():
         messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins une colonne.")
         return
 
-    global resultat_kmeans, n_clusters
+    global resultat_algo, n_clusters
     n_clusters = int(entry_clusters.get())
-    resultat_kmeans = calculate_kmeans(df[colonnes_selectionnees], n_clusters)
+    choix = choix_var.get()
+    if choix == "K-Means":
+        resultat_algo = calculate_kmeans(df[colonnes_selectionnees], n_clusters)
+    else:
+        messagebox.showerror("Erreur", "L'algorithme sélectionné n'est encore pas implémenté.")
+        return
 
     afficher_resultats()
 
@@ -137,31 +152,31 @@ def calculate_kmeans(df, n_clusters):
 
     # Conversion de la liste en DataFrame
     df_ = pd.DataFrame(data_list)
-    print(f'df_ colonnes : {df_.columns}')
     return df_.copy()
+
 # Fonction pour afficher les résultats sous forme de tableau
 def afficher_resultats():
     colonne_selection_fenetre.destroy()  # Ferme la fenêtre de sélection des colonnes
-    if 'Cluster' not in resultat_kmeans.columns:
+    if 'Cluster' not in resultat_algo.columns:
         messagebox.showerror("Erreur", "La colonne 'Cluster' n'a pas été ajoutée correctement.")
         return
     resultat_fenetre = tk.Toplevel(root)
     resultat_fenetre.title("Résultats de KMeans")
     
-    tree = ttk.Treeview(resultat_fenetre, columns=resultat_kmeans.columns.to_list(), show="headings")
+    tree = ttk.Treeview(resultat_fenetre, columns=resultat_algo.columns.to_list(), show="headings")
     
     # Configuration des colonnes
-    for col in resultat_kmeans.columns:
+    for col in resultat_algo.columns:
         tree.heading(col, text=col)
         # tree.column(col, width=100, anchor='center')
     
     # Insertion des lignes
-    for _, row in resultat_kmeans.iterrows():
+    for _, row in resultat_algo.iterrows():
         tree.insert("", "end", values=list(row))
 
     tree.pack(fill="both", expand=True)
 
-    bouton_telecharger = tk.Button(resultat_fenetre, text="Télécharger le résultat", command=lambda: telecharger_resultat(resultat_kmeans))
+    bouton_telecharger = tk.Button(resultat_fenetre, text="Télécharger le résultat", command=lambda: telecharger_resultat(resultat_algo))
     bouton_telecharger.pack()
 
     bouton_update_n_clusters = tk.Button(resultat_fenetre, text="Update n_clusters", command=ouvrir_page_principale)
@@ -233,7 +248,7 @@ entry_text.pack()
 entry_text.bind("<KeyRelease>", lambda event: verifier_conditions())  # Vérifie en temps réel
 
 # Menu de sélection unique
-options = ["K-Means", "CAH", "Mixte (non implémentée)"]
+options = ["K-Means", "CAH (non implémentée)", "Mixte (non implémentée)"]
 choix_var = tk.StringVar()
 choix_var.set("Choisissez une option")  
 
